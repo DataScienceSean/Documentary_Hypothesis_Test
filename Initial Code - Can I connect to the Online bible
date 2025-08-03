@@ -1,0 +1,44 @@
+# List of Old Testament Books & Chapters
+old_testament_books <- list(
+  "Genesis" = 50, "Exodus" = 40, "Leviticus" = 27, "Numbers" = 36, "Deuteronomy" = 34,
+  "Joshua" = 24, "Judges" = 21, "Ruth" = 4,
+  "1 Samuel" = 31, "2 Samuel" = 24,
+  "1 Kings" = 22, "2 Kings" = 25,
+  "1 Chronicles" = 29, "2 Chronicles" = 36,
+  "Ezra" = 10, "Nehemiah" = 13, "Esther" = 10,
+  "Job" = 42, "Psalms" = 150, "Proverbs" = 31, "Ecclesiastes" = 12, "Song of Solomon" = 8,
+  "Isaiah" = 66, "Jeremiah" = 52, "Lamentations" = 5,
+  "Ezekiel" = 48, "Daniel" = 12,
+  "Hosea" = 14, "Joel" = 3, "Amos" = 9, "Obadiah" = 1,
+  "Jonah" = 4, "Micah" = 7, "Nahum" = 3, "Habakkuk" = 3, "Zephaniah" = 3,
+  "Haggai" = 2, "Zechariah" = 14, "Malachi" = 4
+)
+
+#Function to Get One Chapter (I've already have it, modified for loop use)
+
+library(httr)
+library(jsonlite)
+library(tibble)
+library(dplyr)
+library(purrr)
+
+get_verses <- function(book, chapter) {
+  url <- sprintf("https://bible-api.com/%s%%20%s", URLencode(book), chapter)
+  response <- GET(url)
+
+  if (status_code(response) != 200) {
+    message(sprintf("❌ Failed: %s %s", book, chapter))
+    return(NULL)
+  }
+
+  parsed <- fromJSON(content(response, "text", encoding = "UTF-8"))
+
+  verses_df <- parsed$verses
+
+  tibble(
+    book    = verses_df$book_name,
+    chapter = verses_df$chapeter,
+    verse   = verses_df$verses,
+    text    = verses_df$text
+  )
+}
