@@ -1,0 +1,80 @@
+# Loop Through All Old Testament Books and Chapters
+
+all_verses <- list()
+
+for (book in names(old_testament_books)) {
+  chapter_count <- old_testament_books[[book]]
+  for (ch in 1:chapter_count) {
+    message(sprintf("📖 Downloading %s %d", book, ch))
+    chapter_data <- get_verses(book, ch)
+    if (!is.null(chapter_data)) {
+      all_verses[[length(all_verses) + 1]] <- chapter_data
+    }
+    Sys.sleep(0.3)  # Be nice to the API; prevent rate-limiting
+  }
+}
+
+old_testament_df <- bind_rows(all_verses)
+
+# Not all the books downloaded.
+
+# Check which chapters you already have
+completed <- old_testament_df %>%
+  distinct(book, chapter) %>%
+  arrange(book, chapter)
+
+# Reuse the book list
+old_testament_books <- list(
+  "Genesis" = 50, "Exodus" = 40, "Leviticus" = 27, "Numbers" = 36, "Deuteronomy" = 34,
+  "Joshua" = 24, "Judges" = 21, "Ruth" = 4,
+  "1 Samuel" = 31, "2 Samuel" = 24,
+  "1 Kings" = 22, "2 Kings" = 25,
+  "1 Chronicles" = 29, "2 Chronicles" = 36,
+  "Ezra" = 10, "Nehemiah" = 13, "Esther" = 10,
+  "Job" = 42, "Psalms" = 150, "Proverbs" = 31, "Ecclesiastes" = 12, "Song of Solomon" = 8,
+  "Isaiah" = 66, "Jeremiah" = 52, "Lamentations" = 5,
+  "Ezekiel" = 48, "Daniel" = 12,
+  "Hosea" = 14, "Joel" = 3, "Amos" = 9, "Obadiah" = 1,
+  "Jonah" = 4, "Micah" = 7, "Nahum" = 3, "Habakkuk" = 3, "Zephaniah" = 3,
+  "Haggai" = 2, "Zechariah" = 14, "Malachi" = 4
+)
+
+# Create expected full list
+expected <- map2_dfr(names(old_testament_books), old_testament_books, ~ {
+  tibble(book = .x, chapter = 1:.y)
+})
+
+# Find what's missing
+missing <- anti_join(expected, completed, by = c("book", "chapter"))
+
+# Download Only Missing Chapters
+new_data <- list()
+
+for (i in seq_len(nrow(missing))) {
+  book <- missing$book[i]
+  chapter <- missing$chapter[i]
+  message(sprintf("🔁 Downloading missing: %s %d", book, chapter))
+
+  chapter_data <- get_verses(book, chapter)
+  if (!is.null(chapter_data)) {
+    new_data[[length(new_data) + 1]] <- chapter_data
+  }
+  Sys.sleep(0.3)
+
+# Shows what is being downloaded.
+      tibble(
+    book    = verses_df$book_name,
+    chapter = verses_df$chapeter,
+    verse   = verses_df$verses,
+    text    = verses_df$text
+  )
+}
+
+# Combine with previously downloaded data
+if (length(new_data) > 0) {
+  new_data_df <- bind_rows(new_data)
+  old_testament_df <- bind_rows(old_testament_df, new_data_df) %>%
+    distinct(book, chapter, verse, .keep_all = TRUE) %>%
+    arrange(book, chapter, verse)
+}
+
